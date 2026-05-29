@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08111f" />
+    <meta name="description" content="Track and review Serenity buy-signal posts from X in a mobile-first dashboard." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/client/styles.css?v=3" />
+    <title>Serenity Signal Desk</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="https://x.com/aleabitoreddit" target="_blank" rel="noreferrer" aria-label="Open Serenity on X">
+          <span class="brand-mark">S</span>
+          <span>
+            <strong>Serenity Signal Desk</strong>
+            <small>@aleabitoreddit · X monitor</small>
+          </span>
+        </a>
+        <span id="connection-pill" class="connection-pill">Starting…</span>
+      </header>
+
+      <section class="hero-card" aria-label="Latest buying advice summary">
+        <div class="hero-copy">
+          <div class="eyebrow">
+            <span id="signal-light" class="signal signal-quiet" aria-hidden="true"></span>
+            <span id="signal-label">Checking posts</span>
+          </div>
+          <h1 id="signal-title">Loading Serenity analysis…</h1>
+          <p id="hero-summary">We are preparing the latest tweet review, buy-signal confidence, and asset links.</p>
+          <div id="asset-strip" class="asset-strip" aria-label="Detected assets"></div>
+        </div>
+        <div class="hero-panel">
+          <span class="panel-label">Confidence</span>
+          <strong id="confidence-value">--%</strong>
+          <div class="meter"><span id="confidence-meter"></span></div>
+          <span id="hero-time" class="panel-time">Waiting for data</span>
+        </div>
+      </section>
+
+      <section class="action-card" aria-label="Dashboard controls">
+        <button id="check-now" class="primary-action" type="button">
+          <span>Refresh analysis</span>
+          <small>Check latest posts now</small>
+        </button>
+        <button id="enable-notifications" class="secondary-action" type="button">
+          <span>Enable alerts</span>
+          <small>Notify on clear buy signals</small>
+        </button>
+      </section>
+
+      <p id="status" class="status-line" role="status">Loading…</p>
+
+      <section class="insight-grid">
+        <article class="details-card">
+          <div class="section-heading">
+            <span>Selected post</span>
+            <strong id="selected-signal">--</strong>
+          </div>
+          <div id="details" class="details-empty">No post selected yet.</div>
+        </article>
+
+        <article class="explain-card">
+          <div class="section-heading">
+            <span>How to read this</span>
+            <strong>Manual review</strong>
+          </div>
+          <ul>
+            <li><b>Buy</b> means direct buy/added/long language plus a detected asset.</li>
+            <li><b>Watch</b> means conditional language, no entry, or unclear intent.</li>
+            <li><b>Ignore</b> means general commentary without actionable buying advice.</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="feed-card" aria-label="Recent tweets and analysis">
+        <div class="section-heading large">
+          <span>Recent tweets</span>
+          <strong id="feed-count">0 analyzed</strong>
+        </div>
+        <div id="feed-list" class="feed-list"></div>
+      </section>
+
+      <p class="disclaimer">
+        This interface summarizes public posts for review only. It is not financial advice and cannot guarantee intent, timing, liquidity, or risk. Always open the original post and make your own decision before trading.
+      </p>
+    </main>
+    <script type="module" src="/src/client/main.js?v=3"></script>
+  </body>
+</html>
