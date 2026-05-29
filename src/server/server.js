@@ -2,13 +2,13 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { AdviceStore } from './adviceStore.js';
-import { samplePosts } from './samplePosts.js';
-import { fetchSerenityPosts } from './xClient.js';
+import { createSamplePosts } from './samplePosts.js';
+import { fetchSerenityPosts, hasXCredentials } from './xClient.js';
 
 const port = Number(process.env.PORT ?? 8787);
 const root = process.cwd();
 const store = new AdviceStore();
-store.ingest(samplePosts);
+store.ingest(createSamplePosts());
 
 const contentTypes = {
   '.css': 'text/css; charset=utf-8',
@@ -63,10 +63,20 @@ createServer(async (request, response) => {
   }
 
   if (request.method === 'POST' && requestUrl.pathname === '/api/poll') {
+    if (!hasXCredentials()) {
+      const items = store.ingest(createSamplePosts());
+      json(response, 200, {
+        message: 'Demo mode: check worked. Add X_USER_ID and X_BEARER_TOKEN on the server for live Serenity posts.',
+        latestBuy: store.latestBuy() ?? null,
+        items
+      });
+      return;
+    }
+
     try {
       const posts = await fetchSerenityPosts();
       const items = store.ingest(posts);
-      json(response, 200, { latestBuy: store.latestBuy() ?? null, items });
+      json(response, 200, { latestBuy: store.latestBuy() ?? null, items, message: `Checked X at ${new Date().toLocaleTimeString()}` });
     } catch (error) {
       json(response, 503, {
         message: error instanceof Error ? error.message : 'Unable to poll X.',

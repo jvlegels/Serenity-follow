@@ -36,6 +36,11 @@ npm run dev
 
 The `/api/poll` endpoint fetches recent posts, analyzes them, and returns the latest signal. The web client calls that endpoint every minute and when you tap **Check now**.
 
+## Button behavior
+
+- **Check now** always gives visible feedback. Without X credentials it refreshes the demo feed and shows a demo-mode message instead of failing silently.
+- **Enable notifications** needs browser notification support and a secure context, such as HTTPS, `localhost`, or an installed PWA on supported mobile browsers.
+
 ## Scripts
 
 - `npm run dev` - start the PWA frontend and local advice API on port `8787`.

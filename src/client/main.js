@@ -12,26 +12,43 @@ const elements = {
   feedList: document.querySelector('#feed-list')
 };
 
-let notificationsEnabled = false;
+let notificationsEnabled = 'Notification' in window && Notification.permission === 'granted';
 let lastNotifiedId = localStorage.getItem('lastNotifiedAdviceId');
 let selectedItem = null;
 
-async function loadAdvice(mode = 'read') {
+async function loadAdvice(mode = 'read', options = {}) {
   const endpoint = mode === 'poll' ? '/api/poll' : '/api/advice';
-  const response = await fetch(endpoint, { method: mode === 'poll' ? 'POST' : 'GET' });
-  const data = await response.json();
+  const method = mode === 'poll' ? 'POST' : 'GET';
+  const startedAt = new Date();
 
-  selectedItem = selectedItem ?? data.latestBuy ?? data.items?.[0] ?? null;
-  renderHero(data.latestBuy);
-  renderDetails(selectedItem);
-  renderFeed(data.items ?? []);
+  if (options.userInitiated) {
+    setButtonBusy(elements.checkNow, true, 'Checking...');
+  }
 
-  elements.status.textContent = data.message ?? `Updated ${new Date().toLocaleTimeString()}`;
+  try {
+    const response = await fetch(endpoint, { method });
+    const data = await response.json();
 
-  if (data.latestBuy && data.latestBuy.id !== lastNotifiedId && notificationsEnabled) {
-    await showBuyNotification(data.latestBuy);
-    lastNotifiedId = data.latestBuy.id;
-    localStorage.setItem('lastNotifiedAdviceId', lastNotifiedId);
+    selectedItem = selectedItem ?? data.latestBuy ?? data.items?.[0] ?? null;
+    renderHero(data.latestBuy);
+    renderDetails(selectedItem);
+    renderFeed(data.items ?? []);
+
+    const checkedMessage = mode === 'poll' ? `Checked at ${startedAt.toLocaleTimeString()}` : `Updated ${startedAt.toLocaleTimeString()}`;
+    const statusPrefix = response.ok ? '' : 'Could not refresh live X data. ';
+    setStatus(`${statusPrefix}${data.message ?? checkedMessage}`);
+
+    if (data.latestBuy && data.latestBuy.id !== lastNotifiedId && notificationsEnabled) {
+      await showBuyNotification(data.latestBuy);
+      lastNotifiedId = data.latestBuy.id;
+      localStorage.setItem('lastNotifiedAdviceId', lastNotifiedId);
+    }
+  } catch (error) {
+    setStatus(`Connection problem: ${error instanceof Error ? error.message : 'unable to reach the Serenity Follow API.'}`);
+  } finally {
+    if (options.userInitiated) {
+      setButtonBusy(elements.checkNow, false, 'Check now');
+    }
   }
 }
 
@@ -74,24 +91,38 @@ function renderFeed(items) {
     button.addEventListener('click', () => {
       selectedItem = item;
       renderDetails(item);
+      setStatus(`Showing ${item.signal} analysis from ${new Date(item.createdAt).toLocaleTimeString()}.`);
     });
     return button;
   }));
 }
 
 async function enableNotifications() {
-  if (!('Notification' in window)) {
-    elements.status.textContent = 'This browser does not support notifications.';
-    return;
-  }
+  setButtonBusy(elements.enableNotifications, true, 'Checking...');
 
-  const permission = await Notification.requestPermission();
-  if (permission === 'granted') {
-    await ensureServiceWorker();
+  try {
+    if (!canUseNotifications()) {
+      setStatus('Notifications need HTTPS, localhost, or an installed PWA with browser notification support. The dashboard buttons still work.');
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      await ensureServiceWorker();
+    }
+
+    notificationsEnabled = permission === 'granted';
+    elements.enableNotifications.textContent = notificationsEnabled ? 'Notifications on' : 'Enable notifications';
+    setStatus(notificationsEnabled ? 'Notifications enabled. New buy signals will alert you.' : 'Notifications were not enabled by the browser.');
+  } catch (error) {
+    notificationsEnabled = false;
+    setStatus(`Notification setup failed: ${error instanceof Error ? error.message : 'browser blocked notifications.'}`);
+  } finally {
+    elements.enableNotifications.disabled = false;
+    if (!notificationsEnabled) {
+      elements.enableNotifications.textContent = 'Enable notifications';
+    }
   }
-  notificationsEnabled = permission === 'granted';
-  elements.enableNotifications.textContent = notificationsEnabled ? 'Notifications on' : 'Enable notifications';
-  elements.status.textContent = notificationsEnabled ? 'Notifications enabled.' : 'Notifications were not enabled.';
 }
 
 async function showBuyNotification(advice) {
@@ -111,12 +142,25 @@ async function showBuyNotification(advice) {
 }
 
 async function ensureServiceWorker() {
-  if (!('serviceWorker' in navigator)) {
+  if (!('serviceWorker' in navigator) || !window.isSecureContext) {
     return null;
   }
 
-  const registration = await navigator.serviceWorker.register('/sw.js');
-  return registration;
+  return navigator.serviceWorker.register('/sw.js');
+}
+
+function canUseNotifications() {
+  return 'Notification' in window && window.isSecureContext;
+}
+
+function setButtonBusy(button, isBusy, label) {
+  button.disabled = isBusy;
+  button.textContent = label;
+  button.setAttribute('aria-busy', String(isBusy));
+}
+
+function setStatus(message) {
+  elements.status.textContent = message;
 }
 
 function escapeHtml(value) {
@@ -128,10 +172,14 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
-elements.checkNow.addEventListener('click', () => void loadAdvice('poll'));
+elements.checkNow.addEventListener('click', () => void loadAdvice('poll', { userInitiated: true }));
 elements.enableNotifications.addEventListener('click', () => void enableNotifications());
+
+if (notificationsEnabled) {
+  elements.enableNotifications.textContent = 'Notifications on';
+}
 
 void loadAdvice();
 window.setInterval(() => void loadAdvice('poll'), REFRESH_MS);
 
-void ensureServiceWorker();
+void ensureServiceWorker().catch(() => undefined);

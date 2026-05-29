@@ -190,3 +190,8 @@ small,
   0%, 100% { transform: scale(1); opacity: 0.72; }
   50% { transform: scale(1.28); opacity: 1; }
 }
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}

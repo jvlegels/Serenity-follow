@@ -1,8 +1,12 @@
 const SERENITY_USER_ID = process.env.X_USER_ID;
 const X_BEARER_TOKEN = process.env.X_BEARER_TOKEN;
 
+export function hasXCredentials() {
+  return Boolean(SERENITY_USER_ID && X_BEARER_TOKEN);
+}
+
 export async function fetchSerenityPosts() {
-  if (!SERENITY_USER_ID || !X_BEARER_TOKEN) {
+  if (!hasXCredentials()) {
     throw new Error('Set X_USER_ID and X_BEARER_TOKEN to fetch live Serenity posts from X.');
   }
 
