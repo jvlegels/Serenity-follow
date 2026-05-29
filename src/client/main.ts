@@ -1,5 +1,7 @@
 import type { AdviceResponse, AppSettings, SignalRecord, WidgetState } from '../domain/types.js';
 import { toPercent } from '../core/confidence.js';
+import { analyzePosts, createWidgetState, defaultSettings, latestNoteworthySignal } from '../core/signalService.js';
+import { createMockSerenityPosts } from '../data/mockSerenityPosts.js';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
 if (!appRoot) {
@@ -9,7 +11,7 @@ const rootElement: HTMLDivElement = appRoot;
 
 type Route = { name: 'dashboard' } | { name: 'history' } | { name: 'settings' } | { name: 'signal'; id: string };
 
-const fallbackResponse: AdviceResponse = createFallbackResponse();
+const fallbackResponse: AdviceResponse = createStaticMockResponse('Static preview mode. The API is not available, so mock Serenity posts are shown.');
 let state: AdviceResponse = fallbackResponse;
 let selectedNotificationPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
 
@@ -26,7 +28,7 @@ async function bootstrap(): Promise<void> {
 async function refreshSignals(userInitiated: boolean): Promise<void> {
   setLoading(userInitiated);
   try {
-    const response = await fetch(userInitiated ? '/api/poll' : '/api/signals', {
+    const response = await fetch(userInitiated ? 'api/poll' : 'api/signals', {
       method: userInitiated ? 'POST' : 'GET',
       headers: { Accept: 'application/json' }
     });
@@ -45,7 +47,7 @@ async function refreshSignals(userInitiated: boolean): Promise<void> {
       sourceStatus: {
         mode: 'error',
         checkedAt: new Date().toISOString(),
-        message: error instanceof Error ? error.message : 'Unable to load signal data.'
+        message: `Static preview mode: ${error instanceof Error ? error.message : 'Unable to load signal data.'}`
       }
     };
   } finally {
@@ -243,7 +245,7 @@ async function maybeNotify(record: SignalRecord | null): Promise<void> {
   }
   const registration = await registerServiceWorker();
   const title = record.analysis.level === 'high' ? 'Potential buying signal detected' : 'Possible signal needs review';
-  const options = { body: record.analysis.summary, icon: '/icons/icon.svg', data: { url: `/#/signals/${record.analysis.id}` } };
+  const options = { body: record.analysis.summary, icon: './icons/icon.svg', data: { url: `./#/signals/${record.analysis.id}` } };
   if (registration?.showNotification) {
     await registration.showNotification(title, options);
   } else {
@@ -255,7 +257,7 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
   if (!('serviceWorker' in navigator) || !window.isSecureContext) {
     return null;
   }
-  return navigator.serviceWorker.register('/sw.js');
+  return navigator.serviceWorker.register('./sw.js');
 }
 
 function routeFromHash(): Route {
@@ -304,14 +306,14 @@ function persistLatestWidget(widget: WidgetState): void {
   }
 }
 
-function createFallbackResponse(): AdviceResponse {
-  const now = new Date().toISOString();
+function createStaticMockResponse(message: string): AdviceResponse {
+  const records = analyzePosts(createMockSerenityPosts());
   return {
-    records: [],
-    latestSignal: null,
-    widget: { color: 'grey', title: 'No recent signal', summary: 'Start the local API to analyse mock Serenity posts.', signalId: null, updatedAt: now },
-    settings: { notifyHighConfidence: true, notifyPossibleSignals: false, highConfidenceThreshold: 0.68, possibleSignalThreshold: 0.32, pollIntervalMinutes: 5 },
-    sourceStatus: { mode: 'error', message: 'Waiting for the local API.', checkedAt: now }
+    records,
+    latestSignal: latestNoteworthySignal(records),
+    widget: createWidgetState(records),
+    settings: defaultSettings,
+    sourceStatus: { mode: 'mock', message, checkedAt: new Date().toISOString() }
   };
 }
 

@@ -35,7 +35,7 @@ The app **does not provide financial advice**, **does not execute trades**, and 
 | Amber | Possible signal but uncertain | `Possible signal — review · $MSTR` |
 | Grey | No recent signal | `No recent signal` |
 
-The MVP uses a PWA home-screen icon plus notification deep links. A true Android widget requires native Android code and is intentionally deferred. The widget contract is documented in `public/widget/widget-scaffold.json`.
+The MVP uses a PWA home-screen icon plus notification deep links. A true Android widget requires native Android code and is intentionally deferred. The widget contract is documented in `widget/widget-scaffold.json`.
 
 ## Local installation
 
@@ -306,13 +306,63 @@ git push origin feature/serenity-mvp
 3. Click **Squash and merge** or **Merge pull request**.
 4. Delete the feature branch when GitHub offers to do so.
 
+
+## Publishing as a GitHub Pages website
+
+This repository is now safe to publish as a static GitHub Pages site. The checked-in `dist/` folder contains the compiled TypeScript browser files, and the app falls back to mock Serenity data when the backend API is not available.
+
+### Important behavior on GitHub Pages
+
+- The website will load and be usable.
+- It will show mock data unless you deploy the Node server separately.
+- `Refresh analysis` will still keep the app usable by showing the static mock-data preview if `/api/poll` is unavailable.
+- Live X polling requires the Node server plus `X_BEARER_TOKEN`; GitHub Pages alone cannot run backend code or protect API secrets.
+
+### One-time GitHub Pages setup
+
+1. Push this repository to GitHub.
+2. Open the repository on GitHub.
+3. Go to **Settings → Pages**.
+4. Under **Build and deployment**, choose:
+
+```text
+Source: Deploy from a branch
+Branch: main
+Folder: / (root)
+```
+
+5. Click **Save**.
+6. Wait a few minutes. GitHub will show a URL like:
+
+```text
+https://YOUR_USERNAME.github.io/Serenity-follow/
+```
+
+Open that URL on your phone. The app should load with mock Serenity posts.
+
+### Before publishing updates
+
+Whenever TypeScript files change, rebuild and commit the generated `dist/` files:
+
+```bash
+npm run build
+git status
+git add .
+git commit -m "Update Serenity Follow site"
+git push
+```
+
 ## Deployment instructions
 
-### Simple low-cost deployment
+### Static GitHub Pages deployment
 
-This MVP is a Node server that serves both the API and the PWA.
+Use the GitHub Pages instructions above when you want the simplest website. It runs in static mock mode and is the easiest way to confirm the UI works on a published URL.
 
-Recommended beginner-friendly hosts:
+### Full live deployment
+
+For live X polling, deploy the Node server. This MVP server serves both the API and the PWA.
+
+Recommended beginner-friendly server hosts:
 
 - Render
 - Railway
@@ -329,6 +379,12 @@ npm install && npm run build
 Start command:
 
 ```bash
+npm start
+```
+
+Equivalent direct command:
+
+```bash
 node dist/server/server.js
 ```
 
@@ -340,7 +396,7 @@ X_BEARER_TOKEN=<optional for live X API>
 X_USERNAME=aleabitoreddit
 ```
 
-After deployment, open the HTTPS URL on Android and install it to the home screen.
+After server deployment, open the HTTPS URL on Android and install it to the home screen. If you only need static mock testing, use GitHub Pages instead.
 
 ## Troubleshooting guide
 
@@ -361,7 +417,7 @@ node --version
 
 ### App opens but shows mock data
 
-This is expected unless `X_BEARER_TOKEN` is configured. Mock mode is intentional for easy testing.
+This is expected on GitHub Pages and any setup without the Node API plus `X_BEARER_TOKEN`. Mock mode is intentional for easy testing.
 
 ### Android phone cannot open the local URL
 
@@ -408,11 +464,11 @@ src/
   data/                Mock Serenity posts
   domain/              Shared TypeScript domain types
   server/              Node API, static server, X API adapter, in-memory store
-public/
-  icons/               PWA icon
-  widget/              Native widget scaffold contract
-  manifest.webmanifest PWA manifest
-  sw.js                Service worker
+dist/                  Compiled JavaScript committed so GitHub Pages works
+icons/                 PWA icon
+widget/                Native widget scaffold contract
+manifest.webmanifest   PWA manifest
+sw.js                  Service worker
  tests/                Node test runner tests
 ```
 

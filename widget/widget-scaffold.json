@@ -1,0 +1,19 @@
+{
+  "purpose": "Future native Android home-screen widget contract",
+  "states": {
+    "green": {
+      "meaning": "New high-confidence potential buying signal detected",
+      "example": "Potential signal detected · $COIN · 86%"
+    },
+    "amber": {
+      "meaning": "Possible signal but uncertain",
+      "example": "Possible signal — review · $MSTR · 48%"
+    },
+    "grey": {
+      "meaning": "No recent signal",
+      "example": "No recent signal · Last checked 14:32"
+    }
+  },
+  "tapBehavior": "Open the PWA or future native app at /#/signals/:signalId when a signal exists; otherwise open /#/history.",
+  "mvpImplementation": "The PWA dashboard includes a widget preview and persists the latest WidgetState in localStorage under serenity-widget-preview."
+}
