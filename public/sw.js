@@ -1,9 +1,9 @@
-const CACHE_NAME = 'serenity-follow-v3';
+const CACHE_NAME = 'serenity-follow-mvp-v1';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/src/client/main.js?v=3',
-  '/src/client/styles.css?v=3',
+  '/src/client/styles.css',
+  '/dist/client/main.js',
   '/manifest.webmanifest',
   '/icons/icon.svg'
 ];
@@ -19,10 +19,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET' || new URL(event.request.url).pathname.startsWith('/api/')) {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) {
     return;
   }
-
   event.respondWith(caches.match(event.request).then((cached) => cached ?? fetch(event.request)));
 });
 
