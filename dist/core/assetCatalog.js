@@ -1,12 +1,12 @@
 const KNOWN_ASSETS = {
-    COIN: { name: 'Coinbase', type: 'equity' },
-    MSTR: { name: 'MicroStrategy', type: 'equity' },
-    NVDA: { name: 'NVIDIA', type: 'equity' },
-    TSLA: { name: 'Tesla', type: 'equity' },
-    HOOD: { name: 'Robinhood', type: 'equity' },
-    BTC: { name: 'Bitcoin', type: 'crypto' },
-    ETH: { name: 'Ethereum', type: 'crypto' },
-    SOL: { name: 'Solana', type: 'crypto' }
+    COIN: { name: 'Coinbase', type: 'equity', googleFinanceQuote: 'COIN:NASDAQ' },
+    MSTR: { name: 'MicroStrategy', type: 'equity', googleFinanceQuote: 'MSTR:NASDAQ' },
+    NVDA: { name: 'NVIDIA', type: 'equity', googleFinanceQuote: 'NVDA:NASDAQ' },
+    TSLA: { name: 'Tesla', type: 'equity', googleFinanceQuote: 'TSLA:NASDAQ' },
+    HOOD: { name: 'Robinhood', type: 'equity', googleFinanceQuote: 'HOOD:NASDAQ' },
+    BTC: { name: 'Bitcoin', type: 'crypto', googleFinanceQuote: 'BTC-USD' },
+    ETH: { name: 'Ethereum', type: 'crypto', googleFinanceQuote: 'ETH-USD' },
+    SOL: { name: 'Solana', type: 'crypto', googleFinanceQuote: 'SOL-USD' }
 };
 const STOPWORDS = new Set(['I', 'A', 'AN', 'THE', 'X', 'RT', 'CEO', 'USD', 'USDT', 'NFA']);
 export function extractAsset(text) {
@@ -22,6 +22,14 @@ export function extractAsset(text) {
         ticker,
         name: known?.name ?? ticker,
         type: known?.type ?? 'unknown',
-        financeUrl: `https://www.google.com/finance/search?q=${encodeURIComponent(ticker)}`
+        financeUrl: buildGoogleFinanceUrl(ticker)
     };
+}
+export function buildGoogleFinanceUrl(ticker) {
+    const cleanTicker = ticker.replace(/^\$/, '').toUpperCase();
+    const known = KNOWN_ASSETS[cleanTicker];
+    if (known) {
+        return `https://www.google.com/finance/quote/${encodeURIComponent(known.googleFinanceQuote)}`;
+    }
+    return `https://www.google.com/finance/search?q=${encodeURIComponent(cleanTicker)}`;
 }

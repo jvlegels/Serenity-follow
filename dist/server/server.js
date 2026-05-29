@@ -3,8 +3,10 @@ import { createServer } from 'node:http';
 import { extname, join, normalize } from 'node:path';
 import { createMockSerenityPosts } from '../data/mockSerenityPosts.js';
 import { AdviceStore } from './adviceStore.js';
-import { fetchSerenityPostsFromX, hasXApiCredentials } from './xClient.js';
+import { activeSourceAdapter } from './sourceAdapters.js';
+import { hasXApiCredentials } from './xClient.js';
 const port = Number(process.env.PORT ?? 8787);
+const scheduledPollMinutes = Number(process.env.SCHEDULED_POLL_MINUTES ?? 0);
 const root = process.cwd();
 const store = new AdviceStore();
 store.ingest(createMockSerenityPosts());
@@ -25,7 +27,8 @@ createServer(async (request, response) => {
         return;
     }
     if (request.method === 'GET' && requestUrl.pathname === '/api/health') {
-        json(response, 200, { ok: true, mode: hasXApiCredentials() ? 'live-ready' : 'mock', checkedAt: new Date().toISOString() });
+        const adapter = activeSourceAdapter();
+        json(response, 200, { ok: true, mode: hasXApiCredentials() ? 'live-ready' : 'mock', source: adapter.label, scheduledPollMinutes, checkedAt: new Date().toISOString() });
         return;
     }
     if (request.method === 'GET' && requestUrl.pathname === '/api/signals') {
@@ -48,22 +51,35 @@ createServer(async (request, response) => {
 }).listen(port, () => {
     console.log(`Serenity Follow listening at http://localhost:${port}`);
     console.log(hasXApiCredentials() ? 'Live X API mode is configured.' : 'Mock mode is active. Set X_BEARER_TOKEN for live public X monitoring.');
+    startScheduledPolling();
 });
 async function pollSignals(response) {
-    if (!hasXApiCredentials()) {
-        store.ingest(createMockSerenityPosts());
-        json(response, 200, store.response('mock', 'Mock refresh complete. Add X_BEARER_TOKEN to poll public X posts.'));
-        return;
-    }
+    const result = await pollActiveSource();
+    json(response, result.ok ? 200 : 503, result.payload);
+}
+async function pollActiveSource() {
+    const adapter = activeSourceAdapter();
     try {
-        const posts = await fetchSerenityPostsFromX();
+        const posts = await adapter.fetchLatest();
         store.ingest(posts);
-        json(response, 200, store.response('live', `Live public X refresh complete. ${posts.length} recent posts checked.`));
+        const mode = adapter.kind === 'x' ? 'live' : 'mock';
+        const credentialHint = adapter.kind === 'mock' ? ' Add X_BEARER_TOKEN to poll public X posts.' : '';
+        return { ok: true, payload: store.response(mode, `${adapter.label} refresh complete. ${posts.length} posts checked.${credentialHint}`) };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to poll X.';
-        json(response, 503, store.response('error', message));
+        const message = error instanceof Error ? error.message : 'Unable to poll the active source.';
+        return { ok: false, payload: store.response('error', message) };
     }
+}
+function startScheduledPolling() {
+    if (!Number.isFinite(scheduledPollMinutes) || scheduledPollMinutes <= 0) {
+        return;
+    }
+    const intervalMs = scheduledPollMinutes * 60_000;
+    console.log(`Scheduled polling enabled every ${scheduledPollMinutes} minute(s).`);
+    setInterval(() => {
+        void pollActiveSource();
+    }, intervalMs);
 }
 function serveStatic(request, response) {
     const requestUrl = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);

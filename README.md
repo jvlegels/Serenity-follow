@@ -228,7 +228,7 @@ Expected classifications:
 
 | Mock post | Expected result | Why |
 | --- | --- | --- |
-| `Added a starter position in $COIN here...` | High-confidence potential signal | direct position language + ticker |
+| `Added a starter position in $COIN here...` | High-confidence potential signal | direct position language + ticker; mock posts link to the Serenity profile because they are not real X statuses |
 | `Watching $MSTR if it breaks... No entry yet.` | Possible signal | ticker + conditional/no-entry wording |
 | `If $NVDA reclaims... I may add, but not chasing...` | Possible signal | add language, but conditional and uncertain |
 | `Bought $TSLA calls...` | High-confidence potential signal | bought language + ticker |
@@ -258,6 +258,17 @@ npm run dev
 ```
 
 If the token is missing, the app remains fully usable in mock mode.
+
+### Optional scheduled polling on the Node server
+
+You can let the Node server poll automatically by setting `SCHEDULED_POLL_MINUTES` to a number greater than zero:
+
+```bash
+export SCHEDULED_POLL_MINUTES=5
+npm run dev
+```
+
+The server stores ingested posts in `.data/signals.json` so history survives a local server restart. This is still a lightweight MVP store, not a production database backup strategy.
 
 ## GitHub workflow
 
@@ -394,6 +405,7 @@ Environment variables can be copied from `.env.example` and configured in your h
 PORT=8787
 X_BEARER_TOKEN=<optional for live X API>
 X_USERNAME=aleabitoreddit
+SCHEDULED_POLL_MINUTES=5
 ```
 
 After server deployment, open the HTTPS URL on Android and install it to the home screen. If you only need static mock testing, use GitHub Pages instead.
@@ -438,6 +450,12 @@ Browser notifications require:
 
 For quick Android testing, use a tunnel HTTPS URL or install the PWA from Chrome.
 
+### Original post or Google Finance links look wrong
+
+- Mock and manual test posts are not real X statuses, so their X button opens the Serenity profile instead of a fake tweet URL.
+- Live X API posts use the real `https://x.com/<user>/status/<id>` URL returned by the X adapter.
+- Known tickers use direct Google Finance quote URLs, for example `https://www.google.com/finance/quote/COIN%3ANASDAQ`. Unknown tickers fall back to Google Finance search.
+
 ### Live X polling fails
 
 Check:
@@ -463,7 +481,7 @@ src/
   core/                Signal classifier, confidence scoring, widget state
   data/                Mock Serenity posts
   domain/              Shared TypeScript domain types
-  server/              Node API, static server, X API adapter, in-memory store
+  server/              Node API, static server, source adapters, persistent local store
 dist/                  Compiled JavaScript committed so GitHub Pages works
 icons/                 PWA icon
 widget/                Native widget scaffold contract
@@ -501,13 +519,22 @@ Then manually verify:
 - UI is readable at mobile widths.
 - All copy avoids financial-advice language such as “buy now”.
 
+## Implemented next-step enhancements
+
+The current MVP now includes several follow-up improvements beyond the first version:
+
+1. Local server persistence in `.data/signals.json` so session history can survive restarts.
+2. Optional scheduled polling via `SCHEDULED_POLL_MINUTES`.
+3. A `SourceAdapter` abstraction with mock and X implementations, making future accounts/sources easier to add.
+4. Device-local notification threshold settings.
+5. Device-local classifier feedback buttons: “Looks right”, “Too aggressive”, and “Missed signal”.
+6. Manual pasted-post analysis for testing classifier behavior without waiting for X.
+
 ## Next recommended enhancements
 
-1. Add Supabase Postgres for persistent signal history.
-2. Add a scheduled poller instead of only manual refresh.
-3. Add Web Push subscription storage.
-4. Add Telegram notifications as a simple reliable alert channel.
-5. Add user-editable notification thresholds.
-6. Add more monitored accounts through a `SourceAdapter` interface.
-7. Add a feedback button: “Correct / too aggressive / missed signal”.
-8. Build a native Android widget after the PWA behavior is validated.
+1. Replace the local `.data/signals.json` store with Supabase Postgres for durable production history.
+2. Add Web Push subscription storage on the server.
+3. Add Telegram notifications as a simple reliable alert channel.
+4. Add a small admin/source-management screen for multiple X accounts.
+5. Export feedback data so classifier rules can be tuned from real usage.
+6. Build a native Android widget after the PWA behavior is validated.

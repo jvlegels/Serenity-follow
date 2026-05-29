@@ -1,4 +1,4 @@
-import type { AdviceResponse, AppSettings, SignalRecord, WidgetState } from '../domain/types.js';
+import type { AdviceResponse, AppSettings, SignalRecord, SourcePost, WidgetState } from '../domain/types.js';
 import { toPercent } from '../core/confidence.js';
 import { analyzePosts, createWidgetState, defaultSettings, latestNoteworthySignal } from '../core/signalService.js';
 import { createMockSerenityPosts } from '../data/mockSerenityPosts.js';
@@ -12,7 +12,8 @@ const rootElement: HTMLDivElement = appRoot;
 type Route = { name: 'dashboard' } | { name: 'history' } | { name: 'settings' } | { name: 'signal'; id: string };
 
 const fallbackResponse: AdviceResponse = createStaticMockResponse('Static preview mode. The API is not available, so mock Serenity posts are shown.');
-let state: AdviceResponse = fallbackResponse;
+let state: AdviceResponse = { ...fallbackResponse, settings: loadSettings() };
+let feedbackBySignal = loadFeedback();
 let selectedNotificationPermission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
 
 window.addEventListener('hashchange', render);
@@ -36,7 +37,7 @@ async function refreshSignals(userInitiated: boolean): Promise<void> {
     if (!contentType.includes('application/json')) {
       throw new Error('The local API did not return JSON. Run the app with npm run dev.');
     }
-    state = await response.json() as AdviceResponse;
+    state = { ...await response.json() as AdviceResponse, settings: loadSettings() };
     persistLatestWidget(state.widget);
     if (userInitiated) {
       await maybeNotify(state.latestSignal);
@@ -44,6 +45,7 @@ async function refreshSignals(userInitiated: boolean): Promise<void> {
   } catch (error) {
     state = {
       ...fallbackResponse,
+      settings: loadSettings(),
       sourceStatus: {
         mode: 'error',
         checkedAt: new Date().toISOString(),
@@ -131,15 +133,21 @@ function historyTemplate(): string {
 function settingsTemplate(): string {
   const settings = state.settings;
   return `
-    <section class="page-heading"><h1>Settings</h1><p>Configure how cautiously the app alerts you. These MVP settings are displayed for transparency; persistent server-side settings come next.</p></section>
+    <section class="page-heading"><h1>Settings</h1><p>Configure how cautiously the app alerts you. Settings are saved on this device, so you can tune notification behavior while testing.</p></section>
     <section class="grid two">
       <article class="card settings-card">
         <div class="section-title"><span>Notifications</span><strong>${selectedNotificationPermission}</strong></div>
-        ${settingRow('High-confidence alerts', settings.notifyHighConfidence ? 'On' : 'Off')}
-        ${settingRow('Possible-signal alerts', settings.notifyPossibleSignals ? 'On' : 'Off')}
-        ${settingRow('High threshold', `${toPercent(settings.highConfidenceThreshold)}%`)}
-        ${settingRow('Possible threshold', `${toPercent(settings.possibleSignalThreshold)}%`)}
+        <label class="setting-toggle"><input id="notify-high" type="checkbox" ${settings.notifyHighConfidence ? 'checked' : ''}> High-confidence alerts</label>
+        <label class="setting-toggle"><input id="notify-possible" type="checkbox" ${settings.notifyPossibleSignals ? 'checked' : ''}> Possible-signal alerts</label>
+        <label class="setting-label">High threshold <input id="high-threshold" type="number" min="1" max="100" value="${toPercent(settings.highConfidenceThreshold)}"></label>
+        <label class="setting-label">Possible threshold <input id="possible-threshold" type="number" min="1" max="100" value="${toPercent(settings.possibleSignalThreshold)}"></label>
+        <button id="save-settings" class="button secondary full" type="button">Save settings on this device</button>
         <button id="enable-notifications" class="button primary full" type="button">Enable browser notifications</button>
+      </article>
+      <article class="card settings-card">
+        <div class="section-title"><span>Manual test post</span><strong>Client-only</strong></div>
+        <label class="setting-label">Paste a Serenity-style post <textarea id="manual-post" rows="5" placeholder="Example: Added a starter position in $COIN here."></textarea></label>
+        <button id="analyze-manual" class="button secondary full" type="button">Analyse pasted post</button>
       </article>
       <article class="card settings-card">
         <div class="section-title"><span>Data source</span><strong>${statusLabel(state.sourceStatus.mode)}</strong></div>
@@ -150,6 +158,24 @@ function settingsTemplate(): string {
       </article>
     </section>
   `;
+}
+
+function feedbackTemplate(record: SignalRecord): string {
+  const current = feedbackBySignal[record.analysis.id];
+  return `
+    <div class="feedback-panel">
+      <div><strong>Was this analysis useful?</strong><p class="muted small">Your feedback is saved locally and will guide future classifier tuning.</p></div>
+      <div class="feedback-actions">
+        ${feedbackButton(record.analysis.id, 'correct', 'Looks right', current)}
+        ${feedbackButton(record.analysis.id, 'too_aggressive', 'Too aggressive', current)}
+        ${feedbackButton(record.analysis.id, 'missed_signal', 'Missed signal', current)}
+      </div>
+    </div>
+  `;
+}
+
+function feedbackButton(signalId: string, value: FeedbackValue, label: string, current: FeedbackValue | undefined): string {
+  return `<button class="button feedback-button ${current === value ? 'selected' : ''}" data-feedback-id="${signalId}" data-feedback-value="${value}" type="button">${label}</button>`;
 }
 
 function signalDetailTemplate(record: SignalRecord | null): string {
@@ -167,7 +193,7 @@ function signalDetailTemplate(record: SignalRecord | null): string {
       <article class="card">
         <div class="section-title"><span>Original post</span><strong>${formatDateTime(record.post.postedAt)}</strong></div>
         <blockquote>${escapeHtml(record.post.text)}</blockquote>
-        <a class="button secondary full" href="${record.post.url}" target="_blank" rel="noreferrer">Open original post on X</a>
+        <a class="button secondary full" href="${record.post.url}" target="_blank" rel="noreferrer">${externalPostLinkLabel(record.post.source)}</a>
       </article>
       <article class="card">
         <div class="section-title"><span>Asset</span><strong>${asset?.ticker ? `$${asset.ticker}` : 'Unknown'}</strong></div>
@@ -179,6 +205,7 @@ function signalDetailTemplate(record: SignalRecord | null): string {
       <p>${escapeHtml(record.analysis.reasoning)}</p>
       <p class="muted">${escapeHtml(record.analysis.uncertainty)}</p>
       <div class="evidence-list">${record.analysis.evidence.map(evidenceChip).join('')}</div>
+      ${feedbackTemplate(record)}
     </section>
   `;
 }
@@ -216,6 +243,10 @@ function confidencePanel(record: SignalRecord | null): string {
   `;
 }
 
+function externalPostLinkLabel(source: SignalRecord['post']['source']): string {
+  return source === 'x' ? 'Open original post on X' : 'Open Serenity profile on X';
+}
+
 function widgetPreview(widget: WidgetState): string {
   return `
     <div class="widget-preview ${widget.color}">
@@ -228,6 +259,11 @@ function widgetPreview(widget: WidgetState): string {
 function bindNavigation(): void {
   document.querySelector<HTMLButtonElement>('#refresh')?.addEventListener('click', () => void refreshSignals(true));
   document.querySelector<HTMLButtonElement>('#enable-notifications')?.addEventListener('click', () => void enableNotifications());
+  document.querySelector<HTMLButtonElement>('#save-settings')?.addEventListener('click', saveSettingsFromForm);
+  document.querySelector<HTMLButtonElement>('#analyze-manual')?.addEventListener('click', analyzeManualPost);
+  document.querySelectorAll<HTMLButtonElement>('[data-feedback-id]').forEach((button) => {
+    button.addEventListener('click', () => saveFeedback(button.dataset.feedbackId, button.dataset.feedbackValue as FeedbackValue));
+  });
 }
 
 async function enableNotifications(): Promise<void> {
@@ -240,7 +276,7 @@ async function enableNotifications(): Promise<void> {
 }
 
 async function maybeNotify(record: SignalRecord | null): Promise<void> {
-  if (!record || record.analysis.level === 'none' || selectedNotificationPermission !== 'granted') {
+  if (!record || !shouldNotify(record) || selectedNotificationPermission !== 'granted') {
     return;
   }
   const registration = await registerServiceWorker();
@@ -258,6 +294,64 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
     return null;
   }
   return navigator.serviceWorker.register('./sw.js');
+}
+
+function saveSettingsFromForm(): void {
+  const highThreshold = Number(document.querySelector<HTMLInputElement>('#high-threshold')?.value ?? toPercent(defaultSettings.highConfidenceThreshold));
+  const possibleThreshold = Number(document.querySelector<HTMLInputElement>('#possible-threshold')?.value ?? toPercent(defaultSettings.possibleSignalThreshold));
+  const nextSettings: AppSettings = {
+    ...state.settings,
+    notifyHighConfidence: Boolean(document.querySelector<HTMLInputElement>('#notify-high')?.checked),
+    notifyPossibleSignals: Boolean(document.querySelector<HTMLInputElement>('#notify-possible')?.checked),
+    highConfidenceThreshold: Math.max(0.01, Math.min(1, highThreshold / 100)),
+    possibleSignalThreshold: Math.max(0.01, Math.min(1, possibleThreshold / 100))
+  };
+  state = { ...state, settings: nextSettings };
+  saveSettings(nextSettings);
+  render();
+}
+
+function analyzeManualPost(): void {
+  const input = document.querySelector<HTMLTextAreaElement>('#manual-post');
+  const text = input?.value.trim();
+  if (!text) {
+    alert('Paste a post first.');
+    return;
+  }
+  const post: SourcePost = {
+    id: `manual_${Date.now()}`,
+    accountId: 'manual_serenity_test',
+    source: 'manual',
+    authorHandle: 'aleabitoreddit',
+    text,
+    url: 'https://x.com/aleabitoreddit',
+    postedAt: new Date().toISOString()
+  };
+  const posts = [post, ...state.records.map((record) => record.post)];
+  const records = analyzePosts(posts);
+  state = {
+    ...state,
+    records,
+    latestSignal: latestNoteworthySignal(records),
+    widget: createWidgetState(records),
+    sourceStatus: { mode: 'mock', message: 'Manual post analysed on this device.', checkedAt: new Date().toISOString() }
+  };
+  persistLatestWidget(state.widget);
+  window.location.hash = `#/signals/sig_${post.id}`;
+  render();
+}
+
+function saveFeedback(signalId: string | undefined, value: FeedbackValue): void {
+  if (!signalId) return;
+  feedbackBySignal = { ...feedbackBySignal, [signalId]: value };
+  saveFeedbackMap(feedbackBySignal);
+  render();
+}
+
+function shouldNotify(record: SignalRecord | null): boolean {
+  if (!record || record.analysis.level === 'none') return false;
+  if (record.analysis.level === 'high') return state.settings.notifyHighConfidence && record.analysis.confidence >= state.settings.highConfidenceThreshold;
+  return state.settings.notifyPossibleSignals && record.analysis.confidence >= state.settings.possibleSignalThreshold;
 }
 
 function routeFromHash(): Route {
@@ -301,6 +395,42 @@ function setLoading(userInitiated: boolean): void {
 function persistLatestWidget(widget: WidgetState): void {
   try {
     localStorage.setItem('serenity-widget-preview', JSON.stringify(widget));
+  } catch {
+    // Ignore private-mode storage errors.
+  }
+}
+
+type FeedbackValue = 'correct' | 'too_aggressive' | 'missed_signal';
+
+function loadSettings(): AppSettings {
+  try {
+    const saved = localStorage.getItem('serenity-settings');
+    return saved ? { ...defaultSettings, ...JSON.parse(saved) as Partial<AppSettings> } : defaultSettings;
+  } catch {
+    return defaultSettings;
+  }
+}
+
+function saveSettings(settings: AppSettings): void {
+  try {
+    localStorage.setItem('serenity-settings', JSON.stringify(settings));
+  } catch {
+    // Ignore private-mode storage errors.
+  }
+}
+
+function loadFeedback(): Record<string, FeedbackValue> {
+  try {
+    const saved = localStorage.getItem('serenity-feedback');
+    return saved ? JSON.parse(saved) as Record<string, FeedbackValue> : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveFeedbackMap(feedback: Record<string, FeedbackValue>): void {
+  try {
+    localStorage.setItem('serenity-feedback', JSON.stringify(feedback));
   } catch {
     // Ignore private-mode storage errors.
   }

@@ -28,7 +28,7 @@ function createPost(id: string, text: string, ageMs: number, now: Date): SourceP
     source: 'mock',
     authorHandle: serenityAccount.handle,
     text,
-    url: `${serenityAccount.profileUrl}/status/${id}`,
+    url: serenityAccount.profileUrl,
     postedAt: new Date(now.getTime() - ageMs).toISOString()
   };
 }

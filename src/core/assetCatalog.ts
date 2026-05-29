@@ -28,6 +28,16 @@ export function extractAsset(text: string): AssetMention | null {
     ticker,
     name: known?.name ?? ticker,
     type: known?.type ?? 'unknown',
-    financeUrl: `https://www.google.com/finance/search?q=${encodeURIComponent(ticker)}`
+    financeUrl: buildGoogleFinanceUrl(ticker)
   };
+}
+
+export function buildGoogleFinanceUrl(ticker: string): string {
+  const cleanTicker = ticker.replace(/^\$/, '').toUpperCase();
+  const known = KNOWN_ASSETS[cleanTicker];
+  if (known) {
+    return `https://www.google.com/finance/quote/${encodeURIComponent(known.googleFinanceQuote)}`;
+  }
+
+  return `https://www.google.com/finance/search?q=${encodeURIComponent(cleanTicker)}`;
 }
