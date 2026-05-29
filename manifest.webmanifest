@@ -1,0 +1,31 @@
+{
+  "name": "Serenity Follow",
+  "short_name": "Serenity",
+  "description": "Mobile-first monitor for public Serenity posts and potential buying-signal summaries.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#f7f4ef",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Signal history",
+      "short_name": "History",
+      "url": "./#/history",
+      "description": "Open recent analysed Serenity posts"
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "url": "./#/settings",
+      "description": "Open notification and source settings"
+    }
+  ]
+}
