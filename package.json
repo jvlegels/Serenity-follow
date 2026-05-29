@@ -1,0 +1,11 @@
+{
+  "name": "serenity-follow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server/server.js",
+    "test": "node --test",
+    "build": "node --check src/shared/adviceAnalyzer.js && node --check src/server/server.js && node --check src/client/main.js"
+  }
+}

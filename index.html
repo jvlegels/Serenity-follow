@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111827" />
+    <meta name="description" content="Track clear Serenity buying advice from X with phone-friendly alerts." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/client/styles.css" />
+    <title>Serenity Follow</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero-card" aria-label="Serenity buying advice widget">
+        <div class="hero-topline">
+          <span id="signal-light" class="signal signal-quiet" aria-hidden="true"></span>
+          <span id="signal-label">No new buy signal</span>
+        </div>
+        <h1 id="signal-title">Serenity Watch</h1>
+        <p id="hero-summary" class="hero-summary">The latest Serenity posts are being monitored. A bright green alert appears here when the analyzer detects clear buying advice.</p>
+        <div class="hero-actions">
+          <button id="check-now" type="button">Check now</button>
+          <button id="enable-notifications" class="secondary" type="button">Enable notifications</button>
+        </div>
+        <small id="status">Loading Serenity feed...</small>
+      </section>
+
+      <section class="details-card">
+        <h2>Advice details</h2>
+        <article id="details"><p>No posts loaded yet.</p></article>
+      </section>
+
+      <section class="feed-card">
+        <h2>Recent analysis</h2>
+        <div id="feed-list" class="feed-list"></div>
+      </section>
+
+      <p class="disclaimer">This tool summarizes public posts for review only and is not financial advice. Always verify the original post and your own risk before trading.</p>
+    </main>
+    <script type="module" src="/src/client/main.js"></script>
+  </body>
+</html>

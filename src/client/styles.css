@@ -1,0 +1,197 @@
+:root {
+  color: #e5e7eb;
+  background: #020617;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.26), transparent 34rem),
+    linear-gradient(135deg, #020617 0%, #111827 100%);
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell {
+  width: min(100%, 46rem);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.hero-card,
+.details-card,
+.feed-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 1.5rem;
+  background: rgba(15, 23, 42, 0.88);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.hero-card {
+  min-height: 13rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hero-topline {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #cbd5e1;
+}
+
+.signal {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+}
+
+.signal-buy {
+  background: #22c55e;
+  box-shadow: 0 0 1.5rem #22c55e;
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.signal-quiet {
+  background: #64748b;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 0.5rem;
+  font-size: clamp(2.6rem, 12vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+.hero-summary {
+  color: #d1d5db;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.hero-actions,
+.asset-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+button,
+.asset-list a,
+.source-link {
+  border: 0;
+  border-radius: 999px;
+  background: #22c55e;
+  color: #052e16;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.82rem 1rem;
+  text-decoration: none;
+}
+
+button.secondary {
+  background: #334155;
+  color: #f8fafc;
+}
+
+small,
+.disclaimer {
+  color: #94a3b8;
+}
+
+.pill {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.pill-buy {
+  background: rgba(34, 197, 94, 0.18);
+  color: #86efac;
+}
+
+.pill-watch {
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde68a;
+}
+
+.pill-ignore {
+  background: rgba(100, 116, 139, 0.24);
+  color: #cbd5e1;
+}
+
+.feed-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.feed-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.7rem;
+  align-items: center;
+  border-radius: 1rem;
+  background: rgba(30, 41, 59, 0.88);
+  color: #f8fafc;
+  padding: 0.9rem;
+  text-align: left;
+}
+
+.dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+}
+
+.dot-buy { background: #22c55e; }
+.dot-watch { background: #facc15; }
+.dot-ignore { background: #64748b; }
+
+.feed-item time {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.disclaimer {
+  padding: 0 0.4rem 2rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.72; }
+  50% { transform: scale(1.28); opacity: 1; }
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
