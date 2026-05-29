@@ -1,0 +1,14 @@
+{
+  "name": "serenity-follow",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc --project tsconfig.json",
+    "dev": "npm run build && node dist/server/server.js",
+    "start": "node dist/server/server.js",
+    "test": "npm run build && node --test tests/*.test.js",
+    "check": "npm run test"
+  }
+}
