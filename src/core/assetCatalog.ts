@@ -1,20 +1,14 @@
 import type { AssetMention } from '../domain/types.js';
 
-interface KnownAsset {
-  name: string;
-  type: AssetMention['type'];
-  googleFinanceQuote: string;
-}
-
-const KNOWN_ASSETS: Record<string, KnownAsset> = {
-  COIN: { name: 'Coinbase', type: 'equity', googleFinanceQuote: 'COIN:NASDAQ' },
-  MSTR: { name: 'MicroStrategy', type: 'equity', googleFinanceQuote: 'MSTR:NASDAQ' },
-  NVDA: { name: 'NVIDIA', type: 'equity', googleFinanceQuote: 'NVDA:NASDAQ' },
-  TSLA: { name: 'Tesla', type: 'equity', googleFinanceQuote: 'TSLA:NASDAQ' },
-  HOOD: { name: 'Robinhood', type: 'equity', googleFinanceQuote: 'HOOD:NASDAQ' },
-  BTC: { name: 'Bitcoin', type: 'crypto', googleFinanceQuote: 'BTC-USD' },
-  ETH: { name: 'Ethereum', type: 'crypto', googleFinanceQuote: 'ETH-USD' },
-  SOL: { name: 'Solana', type: 'crypto', googleFinanceQuote: 'SOL-USD' }
+const KNOWN_ASSETS: Record<string, { name: string; type: AssetMention['type'] }> = {
+  COIN: { name: 'Coinbase', type: 'equity' },
+  MSTR: { name: 'MicroStrategy', type: 'equity' },
+  NVDA: { name: 'NVIDIA', type: 'equity' },
+  TSLA: { name: 'Tesla', type: 'equity' },
+  HOOD: { name: 'Robinhood', type: 'equity' },
+  BTC: { name: 'Bitcoin', type: 'crypto' },
+  ETH: { name: 'Ethereum', type: 'crypto' },
+  SOL: { name: 'Solana', type: 'crypto' }
 };
 
 const STOPWORDS = new Set(['I', 'A', 'AN', 'THE', 'X', 'RT', 'CEO', 'USD', 'USDT', 'NFA']);
