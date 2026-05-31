@@ -353,7 +353,7 @@ Open that URL on your phone. The app should load with mock Serenity posts.
 
 ### Before publishing updates
 
-Whenever TypeScript files change, rebuild and commit the generated `dist/` files:
+Whenever TypeScript files change, rebuild and commit the generated `dist/` files. The `index.html` file uses versioned asset URLs so browsers fetch the newest compiled JavaScript and CSS:
 
 ```bash
 npm run build
@@ -362,6 +362,31 @@ git add .
 git commit -m "Update Serenity Follow site"
 git push
 ```
+
+
+### If GitHub Pages or your phone still shows an old version
+
+Browsers and installed PWAs can cache aggressively. This project now uses a network-first service worker and versioned asset URLs, but if you still see an old screen:
+
+1. Rebuild and commit the generated files:
+
+```bash
+npm run build
+git add .
+git commit -m "Update published Serenity Follow build"
+git push
+```
+
+2. Wait 1–3 minutes for GitHub Pages to finish publishing.
+3. On Android Chrome, open the site and pull down to refresh.
+4. If the installed home-screen app is still stale, remove the home-screen icon and add it again.
+5. As a last resort, clear Chrome site data for the GitHub Pages URL:
+
+```text
+Chrome → Settings → Site settings → All sites → your github.io site → Clear & reset
+```
+
+The footer shows the app version so you can confirm whether the new build is loaded.
 
 ## Deployment instructions
 

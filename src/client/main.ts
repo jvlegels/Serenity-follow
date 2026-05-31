@@ -3,6 +3,8 @@ import { toPercent } from '../core/confidence.js';
 import { analyzePosts, createWidgetState, defaultSettings, latestNoteworthySignal } from '../core/signalService.js';
 import { createMockSerenityPosts } from '../data/mockSerenityPosts.js';
 
+const APP_VERSION = '20260531-1';
+
 const appRoot = document.querySelector<HTMLDivElement>('#app');
 if (!appRoot) {
   throw new Error('Missing #app root element.');
@@ -22,6 +24,7 @@ void bootstrap();
 async function bootstrap(): Promise<void> {
   await refreshSignals(false);
   render();
+  listenForServiceWorkerUpdates();
   window.setInterval(() => void refreshSignals(false), state.settings.pollIntervalMinutes * 60_000);
   void registerServiceWorker();
 }
@@ -31,6 +34,7 @@ async function refreshSignals(userInitiated: boolean): Promise<void> {
   try {
     const response = await fetch(userInitiated ? 'api/poll' : 'api/signals', {
       method: userInitiated ? 'POST' : 'GET',
+      cache: 'no-store',
       headers: { Accept: 'application/json' }
     });
     const contentType = response.headers.get('content-type') ?? '';
@@ -44,12 +48,12 @@ async function refreshSignals(userInitiated: boolean): Promise<void> {
     }
   } catch (error) {
     state = {
-      ...fallbackResponse,
+      ...createStaticMockResponse(`Static preview mode: ${error instanceof Error ? error.message : 'Unable to load signal data.'}`),
       settings: loadSettings(),
       sourceStatus: {
-        mode: 'error',
+        mode: 'mock',
         checkedAt: new Date().toISOString(),
-        message: `Static preview mode: ${error instanceof Error ? error.message : 'Unable to load signal data.'}`
+        message: `Static preview mode refreshed at ${formatDateTime(new Date().toISOString())}. API is unavailable, so mock Serenity posts are shown.`
       }
     };
   } finally {
@@ -77,7 +81,7 @@ function shellTemplate(route: Route): string {
       ${navLink('#/settings', 'Settings', route.name === 'settings')}
     </nav>
     ${pageTemplate(route)}
-    <footer class="app-footer">Summarises public posts only. Not financial advice. No trades are executed.</footer>
+    <footer class="app-footer">Summarises public posts only. Not financial advice. No trades are executed. <span>Version ${APP_VERSION}</span></footer>
   `;
 }
 
@@ -293,7 +297,7 @@ async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null
   if (!('serviceWorker' in navigator) || !window.isSecureContext) {
     return null;
   }
-  return navigator.serviceWorker.register('./sw.js');
+  return navigator.serviceWorker.register(`./sw.js?v=${APP_VERSION}`);
 }
 
 function saveSettingsFromForm(): void {
@@ -352,6 +356,19 @@ function shouldNotify(record: SignalRecord | null): boolean {
   if (!record || record.analysis.level === 'none') return false;
   if (record.analysis.level === 'high') return state.settings.notifyHighConfidence && record.analysis.confidence >= state.settings.highConfidenceThreshold;
   return state.settings.notifyPossibleSignals && record.analysis.confidence >= state.settings.possibleSignalThreshold;
+}
+
+function listenForServiceWorkerUpdates(): void {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 
 function routeFromHash(): Route {

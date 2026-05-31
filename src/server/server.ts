@@ -100,8 +100,19 @@ function serveStatic(request: IncomingMessage, response: ServerResponse): void {
   const relativePath = safePath === '/' ? 'index.html' : safePath;
   const candidates = [join(root, relativePath), join(root, 'public', relativePath)];
   const finalPath = candidates.find((path) => existsSync(path) && statSync(path).isFile()) ?? join(root, 'index.html');
-  response.writeHead(200, { 'Content-Type': contentTypes[extname(finalPath)] ?? 'application/octet-stream' });
+  response.writeHead(200, {
+    'Content-Type': contentTypes[extname(finalPath)] ?? 'application/octet-stream',
+    'Cache-Control': cacheControlFor(finalPath)
+  });
   createReadStream(finalPath).pipe(response);
+}
+
+function cacheControlFor(path: string): string {
+  const extension = extname(path);
+  if (extension === '.html' || extension === '.js' || extension === '.css' || extension === '.webmanifest') {
+    return 'no-cache, no-store, must-revalidate';
+  }
+  return 'public, max-age=3600';
 }
 
 function json(response: ServerResponse, status: number, payload: unknown): void {
